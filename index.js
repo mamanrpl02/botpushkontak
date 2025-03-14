@@ -52,54 +52,83 @@ async function connectToWhatsapp() {
     }
   });
 
+  // Auto-Reply Chat
   socket.ev.on("messages.upsert", async ({ messages }) => {
-    await new Promise((resolve) => setTimeout(resolve, 100)); // Delay kecil
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const msg = messages[0];
+    if (!msg.message) return;
 
-    if (!msg.message) return; // Hindari error jika pesan kosong
-
-    // Cek apakah pesan memiliki teks
     const text =
       msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-
     if (!text) return;
 
-    // Cek apakah pesan berasal dari grup atau pribadi
     const senderNumber = msg.key.remoteJid;
-    const isGroup = senderNumber.endsWith("@g.us");
+    const isGroup = senderNumber.endsWith("120363411442948382@g.us");
 
-    console.log(`📩 Pesan diterima dari: ${senderNumber} -> ${text}`);
-
-    // Buat daftar respons berdasarkan teks yang diterima
     let replyMessage = null;
 
-    switch (text.toLowerCase()) {
-      case "halo":
-      case "hi":
-      case "hey":
-        replyMessage = `Hai! 😊 Ada yang bisa saya bantu?\n\n> 🤖 Bot WA IG : @manzstore07`;
-        break;
+    if (isGroup) {
+      const participant = msg.key.participant || senderNumber;
+      console.log(
+        `📩 Pesan grup dari: ${participant} di ${senderNumber} -> ${text}`
+      );
 
-      case ".menu":
-        replyMessage = `📌 *Menu Layanan*\n1️⃣ Cek harga produk\n2️⃣ Info layanan bot\n3️⃣ Bantuan lainnya\n\nKetik angka pilihan Anda.\n\n> 🤖 Bot WA IG : @manzstore07`;
-        break;
+      // Cek apakah bot disebut dalam grup
+      const botMentioned =
+        msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.includes(
+          socket.user.id
+        );
+      if (!botMentioned) return;
 
-      case "1":
-        replyMessage = `📍 Harga produk:\n💳 Paket A - Rp50.000\n💳 Paket B - Rp100.000\n\nKetik "beli [paket]" untuk membeli.\n\n> 🤖 Bot WA IG : @manzstore07`;
-        break;
+      replyMessage = `👥 *Balasan Grup*\nHalo @${
+        participant.split("@")[0]
+      }, ada yang bisa saya bantu? 😊`;
+    } else {
+      console.log(`📩 Pesan pribadi dari: ${senderNumber} -> ${text}`);
 
-      case "2":
-        replyMessage = `📢 Bot ini bisa membantu Anda:\n✅ Auto-reply chat\n✅ Auto-broadcast\n✅ Integrasi API WhatsApp\n\nKetik "bantuan" untuk info lebih lanjut.\n\n> 🤖 Bot WA IG : @manzstore07`;
-        break;
-
-      case "3":
-        replyMessage = `Silakan tanyakan apa yang ingin Anda ketahui. Saya siap membantu! 😊\n\n> 🤖 Bot WA IG : @manzstore07`;
-        break;
+      switch (text.toLowerCase()) {
+        
+        case "halo":
+        case "hi":
+        case "hey":
+          replyMessage = `Hai! 😊 Ada yang bisa saya bantu?\n\n> 🤖 Bot WA IG : @manzstore07`;
+          break;
+        case "menu":
+          replyMessage = `📌 *Menu Layanan*\n1️⃣ Cek harga produk\n2️⃣ Info layanan bot\n3️⃣ Bantuan lainnya\n\nKetik angka pilihan Anda.`;
+          break;
+        case "1":
+          replyMessage = `📍 Harga produk:\n💳 Paket A - Rp50.000\n💳 Paket B - Rp100.000\n\nKetik "beli [paket]" untuk membeli.`;
+          break;
+        case "2":
+          replyMessage = `📢 Bot ini bisa membantu Anda:\n✅ Auto-reply chat\n✅ Auto-broadcast\n✅ Integrasi API WhatsApp\n\nKetik "bantuan" untuk info lebih lanjut.`;
+          break;
+        case "3":
+          replyMessage = `Silakan tanyakan apa yang ingin Anda ketahui. Saya siap membantu! 😊`;
+          break;
+        case `.p${id}`:
+          replyMessage = ``;
+          break;
+        case ".listgroup":
+          try {
+            const groups = await socket.groupFetchAllParticipating();
+            const groupList = Object.values(groups)
+              .map((group) => `📌 *${group.subject}* \n ${group.id} \n`)
+              .join("\n"); 
+            replyMessage = `📋 *Daftar Grup WhatsApp yang anda diikuti:* \n \n ${groupList} \n`;
+          } catch (error) {
+            replyMessage = "❌ Gagal mengambil daftar grup.";
+            console.error("Error mengambil daftar grup:", error);
+          }
+          break;
+      }
     }
 
-    // Kirim balasan hanya jika ada pesan yang sesuai
     if (replyMessage) {
-      await socket.sendMessage(senderNumber, { text: replyMessage });
+      await socket.sendMessage(
+        senderNumber,
+        { text: replyMessage },
+        { quoted: msg }
+      );
       console.log("💬 Balasan terkirim:", replyMessage);
     }
   });
