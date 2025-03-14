@@ -26,6 +26,7 @@ async function connectToWhatsapp() {
   if (useCODE && !socket.authState.creds.registered) {
     setTimeout(async function () {
       try {
+        console.log("⏳ Meminta pairing code untuk nomor:", "6281223937340");
         const pairingCode = await socket.requestPairingCode("6281223937340");
         console.log("✅ Pairing Code Anda:", pairingCode);
       } catch (error) {
@@ -69,15 +70,37 @@ async function connectToWhatsapp() {
 
     console.log(`📩 Pesan diterima dari: ${senderNumber} -> ${text}`);
 
-    if (text.toLowerCase() === "halo") {
-      console.log("💬 Menerima pesan 'halo', mengirim balasan...");
+    // Buat daftar respons berdasarkan teks yang diterima
+    let replyMessage = null;
 
-      // Tambahkan watermark di bawah pesan utama
-      const replyMessage = `Hai, ada yang bisa saya bantu?\n\n\n> 🤖 Bot WA IG : @manzstore07`;
+    switch (text.toLowerCase()) {
+      case "halo":
+      case "hi":
+      case "hey":
+        replyMessage = `Hai! 😊 Ada yang bisa saya bantu?\n\n> 🤖 Bot WA IG : @manzstore07`;
+        break;
 
-      await socket.sendMessage(senderNumber, {
-        text: replyMessage,
-      });
+      case ".menu":
+        replyMessage = `📌 *Menu Layanan*\n1️⃣ Cek harga produk\n2️⃣ Info layanan bot\n3️⃣ Bantuan lainnya\n\nKetik angka pilihan Anda.\n\n> 🤖 Bot WA IG : @manzstore07`;
+        break;
+
+      case "1":
+        replyMessage = `📍 Harga produk:\n💳 Paket A - Rp50.000\n💳 Paket B - Rp100.000\n\nKetik "beli [paket]" untuk membeli.\n\n> 🤖 Bot WA IG : @manzstore07`;
+        break;
+
+      case "2":
+        replyMessage = `📢 Bot ini bisa membantu Anda:\n✅ Auto-reply chat\n✅ Auto-broadcast\n✅ Integrasi API WhatsApp\n\nKetik "bantuan" untuk info lebih lanjut.\n\n> 🤖 Bot WA IG : @manzstore07`;
+        break;
+
+      case "3":
+        replyMessage = `Silakan tanyakan apa yang ingin Anda ketahui. Saya siap membantu! 😊\n\n> 🤖 Bot WA IG : @manzstore07`;
+        break;
+    }
+
+    // Kirim balasan hanya jika ada pesan yang sesuai
+    if (replyMessage) {
+      await socket.sendMessage(senderNumber, { text: replyMessage });
+      console.log("💬 Balasan terkirim:", replyMessage);
     }
   });
 }
